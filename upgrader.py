@@ -11,15 +11,25 @@ def check_version(latest_version):
     current_version = 'v3.3.0'
     return current_version < latest_version
 
+def get_package_asset_url(assets):
+    pkg = {'name': 'amd64.deb','content_type': 'application/octet-stream'}
+
+    for asset in assets:
+        is_amd64 = pkg['name'] in asset['name']
+        is_content_type = pkg['content_type'] == asset['content_type']
+
+        if is_amd64 and is_content_type:
+            return asset['browser_download_url']
+
 def check_latest_release():
-    url = 'https://api.github.com/MediaBrowser/Emby/latest'
+    url = 'https://api.github.com/repos/MediaBrowser/Emby.Releases/releases/latest'
     headers = {'user-agent': 'emby-upgrader/0.0.1'}
 
     r = requests.get(url, headers=headers)
     data = r.json()
 
     latest = data['tag_name']
-    download_url = data['assets']['browser_download_url']
+    download_url = get_package_asset_url(data['assets'])
 
     if check_version(latest):
         return False
@@ -47,9 +57,10 @@ def install_emby_package(file_path):
 def capture_emby_package(version, url):
     print('Downloading ', version, 'from ', url)
 
-    r_file = download_emby_package(url)
+    pkg = download_emby_package(url)
     
-    print('Installing file ', local_f)
+    print('Installing file ', pkg)
+    install_emby_package(pkg)
 
 def main():
     release = check_latest_release()
