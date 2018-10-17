@@ -1,15 +1,26 @@
 #!/usr/bin/env python
 
 import apt
-import apt.progress
 import sys
 import tempfile
+import time
 import requests
 
+from packaging.version import Version, parse
+from progressbar import Bar, Percentage, ProgressBar 
+
 def check_version(latest_version):
-    # TODO: find a way to query Emby version
-    current_version = 'v3.3.0'
-    return current_version < latest_version
+    cache = apt.Cache()
+    pkg = cache['emby-server']
+    # pkg = cache['python-apt']
+
+    if not pkg:
+        return False
+    
+    latest_version = parse(latest_version)
+    pkg_version = parse(pkg.versions[0].source_version)
+
+    return pkg_version < latest_version
 
 def get_package_asset_url(assets):
     pkg = {'name': 'amd64.deb','content_type': 'application/octet-stream'}
@@ -31,7 +42,7 @@ def check_latest_release():
     latest = data['tag_name']
     download_url = get_package_asset_url(data['assets'])
 
-    if check_version(latest):
+    if not check_version(latest):
         return False
 
     return latest, download_url
@@ -39,10 +50,23 @@ def check_latest_release():
 def download_emby_package(url):
     fd, name = tempfile.mkstemp()
     r = requests.get(url)
-    with fd as f:
-        for chunk in r.iter_content(chunk_size=1024):
+
+    total_length = int(r.headers.get('content-length'))
+    download_length = 0
+
+    bar = ProgressBar(widgets=[Percentage(), Bar()], maxval=total_length).start()
+    
+    with open(fd, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=8192):
             if chunk: # filter out keep-alive chunks
+                download_length += len(chunk)
+                time.sleep(0.01)
+                bar.update(download_length)
+
                 f.write(chunk)
+
+    bar.finish()
+
     return name
 
 def install_emby_package(file_path):
@@ -55,17 +79,18 @@ def install_emby_package(file_path):
     package.install(apt.progress.base.InstallProgress())
 
 def capture_emby_package(version, url):
-    print('Downloading ', version, 'from ', url)
+    print('Downloading', version, 'from', url)
 
     pkg = download_emby_package(url)
     
-    print('Installing file ', pkg)
-    install_emby_package(pkg)
+    print('\nInstalling file ', pkg)
+    # install_emby_package(pkg)
 
 def main():
     release = check_latest_release()
 
     if not release:
+        print('Up to date!')
         return False
     
     version, download_url = release
