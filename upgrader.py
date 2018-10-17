@@ -52,7 +52,7 @@ def install_emby_package(file_path):
     cache.open(None)
 
     package = apt.debfile.DebPackage(file_path, cache)
-    package.install(apt.progress.InstallProgress())
+    package.install(apt.progress.base.InstallProgress())
 
 def capture_emby_package(version, url):
     print('Downloading ', version, 'from ', url)
