@@ -37,13 +37,13 @@ def check_latest_release():
     return latest, download_url
 
 def download_emby_package(url):
-    local_f = tempfile.mkstemp()
+    fd, name = tempfile.mkstemp()
     r = requests.get(url)
-    with open(local_f, 'wb') as f:
+    with fd as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive chunks
                 f.write(chunk)
-    return local_f
+    return name
 
 def install_emby_package(file_path):
     # initialize the apt cache
