@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import apt
+import apt.debfile
+# import apt.progress
 import sys
 import tempfile
 import time
@@ -57,10 +59,11 @@ def download_emby_package(url):
 
     bar = ProgressBar(widgets=[Percentage(), Bar()], maxval=total_length).start()
     
-    with open(fd, 'wb') as f:
+    with open(fd, 'wb') as f: 
         for chunk in r.iter_content(chunk_size=8192):
             if chunk: # filter out keep-alive chunks
                 download_length += len(chunk)
+
                 time.sleep(0.01)
                 bar.update(download_length)
 
@@ -77,7 +80,12 @@ def install_emby_package(file_path):
     cache.open(None)
 
     package = apt.debfile.DebPackage(file_path, cache)
-    package.install(apt.progress.base.InstallProgress())
+    package.check()
+    
+    # may fail due to bad file descriptor
+    # https://bugs.launchpad.net/ubuntu/+source/software-center/+bug/1306543
+    # package.install(apt.progress.base.InstallProgress())
+    package.install()
 
 def capture_emby_package(version, url):
     print('Downloading', version, 'from', url)
@@ -85,7 +93,7 @@ def capture_emby_package(version, url):
     pkg = download_emby_package(url)
     
     print('\nInstalling file ', pkg)
-    # install_emby_package(pkg)
+    install_emby_package(pkg)
 
 def main():
     release = check_latest_release()
