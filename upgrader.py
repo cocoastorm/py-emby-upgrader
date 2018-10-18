@@ -11,11 +11,12 @@ from progressbar import Bar, Percentage, ProgressBar
 
 def check_version(latest_version):
     cache = apt.Cache()
-    pkg = cache['emby-server']
-    # pkg = cache['python-apt']
-
-    if not pkg:
-        return False
+    
+    try:
+        pkg = cache['emby-server']
+    except:
+        # if package is unavailable, install emby-server
+        return True
     
     latest_version = parse(latest_version)
     pkg_version = parse(pkg.versions[0].source_version)
